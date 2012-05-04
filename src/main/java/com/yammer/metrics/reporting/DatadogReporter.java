@@ -51,7 +51,11 @@ public class DatadogReporter extends AbstractPollingReporter implements
   private JsonGenerator jsonOut;
 
   public static void enable(long period, TimeUnit unit, String apiKey) {
-    DatadogReporter dd = new DatadogReporter(Metrics.defaultRegistry(), apiKey);
+    enable(period, unit, apiKey, null);
+  }
+  
+  public static void enable(long period, TimeUnit unit, String apiKey, String host) {
+    DatadogReporter dd = new DatadogReporter(Metrics.defaultRegistry(), apiKey, host);
     dd.start(period, unit);
   }
 
