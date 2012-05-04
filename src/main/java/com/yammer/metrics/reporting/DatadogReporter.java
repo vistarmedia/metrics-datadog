@@ -38,11 +38,13 @@ public class DatadogReporter extends AbstractPollingReporter implements
   public boolean printVmMetrics = true;
   protected final Locale locale = Locale.US;
   protected final Clock clock;
+  private final String host;
   protected final MetricPredicate predicate;
   protected final Transport transport;
   private static final Logger LOG = LoggerFactory
       .getLogger(DatadogReporter.class);
   private final VirtualMachineMetrics vm;
+  
 
   private static final JsonFactory jsonFactory = new JsonFactory();
   private static final ObjectMapper mapper = new ObjectMapper(jsonFactory);
@@ -54,24 +56,23 @@ public class DatadogReporter extends AbstractPollingReporter implements
   }
 
   public DatadogReporter(MetricsRegistry registry, String apiKey) {
-    this(registry, new HttpTransport("app.datadoghq.com", apiKey), Clock
-        .defaultClock());
+    this(registry, apiKey, null);
   }
-
-  public DatadogReporter(MetricsRegistry registry, Transport transport,
-      Clock clock) {
+  
+  public DatadogReporter(MetricsRegistry registry, String apiKey, String host) {
     this(registry, MetricPredicate.ALL, VirtualMachineMetrics.getInstance(),
-        transport, clock);
+        new HttpTransport("app.datadoghq.com", apiKey), Clock.defaultClock(), host);
   }
 
   public DatadogReporter(MetricsRegistry metricsRegistry,
       MetricPredicate predicate, VirtualMachineMetrics vm, Transport transport,
-      Clock clock) {
+      Clock clock, String host) {
     super(metricsRegistry, "datadog-reporter");
     this.vm = vm;
     this.transport = transport;
     this.predicate = predicate;
     this.clock = clock;
+    this.host = host;
   }
 
   @Override
@@ -188,7 +189,7 @@ public class DatadogReporter extends AbstractPollingReporter implements
   }
 
   private void pushCounter(String name, Long count, Long epoch) {
-    DatadogCounter counter = new DatadogCounter(name, count, epoch);
+    DatadogCounter counter = new DatadogCounter(name, count, epoch, host);
     try {
       mapper.writeValue(jsonOut, counter);
     } catch (Exception e) {
@@ -206,7 +207,7 @@ public class DatadogReporter extends AbstractPollingReporter implements
   }
 
   private void sendGauge(String name, Number count, Long epoch) {
-    DatadogGauge gauge = new DatadogGauge(name, count, epoch);
+    DatadogGauge gauge = new DatadogGauge(name, count, epoch, host);
     try {
       mapper.writeValue(jsonOut, gauge);
     } catch (Exception e) {

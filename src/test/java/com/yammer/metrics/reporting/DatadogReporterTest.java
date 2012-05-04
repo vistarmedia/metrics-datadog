@@ -1,8 +1,9 @@
 package com.yammer.metrics.reporting;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,8 @@ public class DatadogReporterTest {
   MockTransport transport;
   VirtualMachineMetrics vm;
   Clock clock;
+  DatadogReporter ddNoHost;
+  DatadogReporter dd;
   static final MetricPredicate ALL = MetricPredicate.ALL;
 
   @Before
@@ -34,13 +37,19 @@ public class DatadogReporterTest {
     transport = new MockTransport();
     clock = Clock.defaultClock();
     vm = VirtualMachineMetrics.getInstance();
+    ddNoHost = new DatadogReporter(metricsRegistry, MetricPredicate.ALL,
+        VirtualMachineMetrics.getInstance(), transport, Clock.defaultClock(),
+        null);
+
+    dd = new DatadogReporter(metricsRegistry, MetricPredicate.ALL,
+        VirtualMachineMetrics.getInstance(), transport, Clock.defaultClock(),
+        "hostname");
   }
 
   @SuppressWarnings("unchecked")
   @Test
   public void testBasicSend() throws JsonParseException, JsonMappingException,
       IOException {
-    DatadogReporter dd = new DatadogReporter(metricsRegistry, transport, clock);
     dd.printVmMetrics = false;
 
     Counter counter = metricsRegistry.newCounter(DatadogReporterTest.class,
@@ -87,4 +96,22 @@ public class DatadogReporterTest {
     assertEquals(123, points.get(0).get(1));
   }
 
+  @Test
+  public void testSupplyHostname() throws UnsupportedEncodingException {
+    Counter counter = metricsRegistry.newCounter(DatadogReporterTest.class,
+        "my.counter");
+    counter.inc();
+    
+    assertEquals(0, transport.numRequests);
+    ddNoHost.run();
+    assertEquals(1, transport.numRequests);
+    String noHostBody = new String(transport.lastRequest.getPostBody(), "UTF-8");
+    
+    dd.run();
+    assertEquals(2, transport.numRequests);
+    String hostBody = new String(transport.lastRequest.getPostBody(), "UTF-8");
+    
+    assertFalse(noHostBody.indexOf("\"host\":\"hostname\"") > -1);
+    assertTrue(hostBody.indexOf("\"host\":\"hostname\"") > -1);
+  }
 }
