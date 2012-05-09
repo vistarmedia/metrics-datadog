@@ -16,7 +16,7 @@ DatadogReporter.enable(15, TimeUnit.SECONDS, myDatadogKey)
 
 This repo is subject to change. Nuts!
 
-Remote:   https://s3.amazonaws.com/maven.vistarmedia.com/maven/snapshots
-Group:    com.vistarmedia
-Artifact: metrics-datadog
-Version:  0.0.8-SNAPSHOT
+* Remote:   https://s3.amazonaws.com/maven.vistarmedia.com/maven/snapshots
+* Group:    com.vistarmedia
+* Artifact: metrics-datadog
+* Version:  0.0.8-SNAPSHOT
