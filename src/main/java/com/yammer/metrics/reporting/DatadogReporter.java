@@ -58,6 +58,13 @@ public class DatadogReporter extends AbstractPollingReporter implements
     DatadogReporter dd = new DatadogReporter(Metrics.defaultRegistry(), apiKey, host);
     dd.start(period, unit);
   }
+  
+  public static void enableForEc2Instance(long period, TimeUnit unit,
+      String apiKey) throws IOException {
+    String hostName = AwsHelper.getEc2InstanceId();
+    DatadogReporter dd = new DatadogReporter(Metrics.defaultRegistry(), apiKey, hostName);
+    dd.start(period, unit);
+  }
 
   public DatadogReporter(MetricsRegistry registry, String apiKey) {
     this(registry, apiKey, null);
