@@ -1,7 +1,10 @@
 package com.yammer.metrics.reporting.model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -13,9 +16,19 @@ public abstract class DatadogSeries<T extends Number> {
   private T count;
   private Long epoch;
   private String host;
+  private List<String> tags;
+
+  private final Pattern tagPattern = Pattern.compile("(\\w+)\\[([\\w\\,]+)\\]");
 
   public DatadogSeries(String name, T count, Long epoch, String host) {
-    this.name = name;
+    Matcher matcher = tagPattern.matcher(name);
+    if (matcher.find() && matcher.groupCount() == 2) {
+      this.name = matcher.group(1);
+      this.tags = Arrays.asList(matcher.group(2).split("\\,"));
+    } else {
+      this.tags = new ArrayList<String>();
+      this.name = name;
+    }
     this.count = count;
     this.epoch = epoch;
     this.host = host;
@@ -25,9 +38,13 @@ public abstract class DatadogSeries<T extends Number> {
   public String getHost() {
     return host;
   }
-  
+
   public String getMetric() {
     return name;
+  }
+
+  public List<String> getTags() {
+    return tags;
   }
 
   public List<List<Number>> getPoints() {
