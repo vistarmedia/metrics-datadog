@@ -44,7 +44,7 @@ public class DatadogReporter extends AbstractPollingReporter implements
   private static final Logger LOG = LoggerFactory
       .getLogger(DatadogReporter.class);
   private final VirtualMachineMetrics vm;
-  
+
 
   private static final JsonFactory jsonFactory = new JsonFactory();
   private static final ObjectMapper mapper = new ObjectMapper(jsonFactory);
@@ -53,12 +53,12 @@ public class DatadogReporter extends AbstractPollingReporter implements
   public static void enable(long period, TimeUnit unit, String apiKey) {
     enable(period, unit, apiKey, null);
   }
-  
+
   public static void enable(long period, TimeUnit unit, String apiKey, String host) {
     DatadogReporter dd = new DatadogReporter(Metrics.defaultRegistry(), apiKey, host);
     dd.start(period, unit);
   }
-  
+
   public static void enableForEc2Instance(long period, TimeUnit unit,
       String apiKey) throws IOException {
     String hostName = AwsHelper.getEc2InstanceId();
@@ -69,7 +69,7 @@ public class DatadogReporter extends AbstractPollingReporter implements
   public DatadogReporter(MetricsRegistry registry, String apiKey) {
     this(registry, apiKey, null);
   }
-  
+
   public DatadogReporter(MetricsRegistry registry, String apiKey, String host) {
     this(registry, MetricPredicate.ALL, VirtualMachineMetrics.getInstance(),
         new HttpTransport("app.datadoghq.com", apiKey), Clock.defaultClock(), host);
@@ -234,7 +234,9 @@ public class DatadogReporter extends AbstractPollingReporter implements
     if (name.hasScope()) {
       sb.append(name.getScope()).append('.');
     }
-    sb.append(name.getName());
+
+    String metricName = name.getName().split("\\[")[0];
+    sb.append(metricName);
 
     for (String part : path) {
       sb.append('.').append(part);
