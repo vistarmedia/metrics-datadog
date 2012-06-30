@@ -235,13 +235,16 @@ public class DatadogReporter extends AbstractPollingReporter implements
       sb.append(name.getScope()).append('.');
     }
 
-    String metricName = name.getName().split("\\[")[0];
-    sb.append(metricName);
+    String[] metricParts = name.getName().split("\\[");
+    sb.append(metricParts[0]);
 
     for (String part : path) {
       sb.append('.').append(part);
     }
 
+    for(int i=1; i<metricParts.length; i++) {
+      sb.append('[').append(metricParts[i]);
+    }
     return sb.toString();
   }
 

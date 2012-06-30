@@ -6,7 +6,6 @@ import java.util.List;
 
 import org.junit.Test;
 
-import com.yammer.metrics.reporting.model.DatadogCounter;
 import com.yammer.metrics.reporting.model.DatadogGauge;
 
 public class DatadogGaugeTest {

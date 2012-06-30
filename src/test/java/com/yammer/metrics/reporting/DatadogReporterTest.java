@@ -7,6 +7,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -17,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yammer.metrics.core.Clock;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Gauge;
+import com.yammer.metrics.core.Meter;
 import com.yammer.metrics.core.MetricPredicate;
 import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.core.VirtualMachineMetrics;
@@ -101,17 +103,44 @@ public class DatadogReporterTest {
     Counter counter = metricsRegistry.newCounter(DatadogReporterTest.class,
         "my.counter");
     counter.inc();
-    
+
     assertEquals(0, transport.numRequests);
     ddNoHost.run();
     assertEquals(1, transport.numRequests);
     String noHostBody = new String(transport.lastRequest.getPostBody(), "UTF-8");
-    
+
     dd.run();
     assertEquals(2, transport.numRequests);
     String hostBody = new String(transport.lastRequest.getPostBody(), "UTF-8");
-    
+
     assertFalse(noHostBody.indexOf("\"host\":\"hostname\"") > -1);
     assertTrue(hostBody.indexOf("\"host\":\"hostname\"") > -1);
   }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testTaggedMeter() throws Throwable {
+    Meter s = metricsRegistry.newMeter(String.class,
+        "meter[with,tags]", "ticks", TimeUnit.SECONDS);
+    s.mark();
+    
+    ddNoHost.printVmMetrics = false;
+    ddNoHost.run();
+    String body = new String(transport.lastRequest.getPostBody(), "UTF-8");
+
+    Map<String, Object> request = new ObjectMapper().readValue(body,
+        HashMap.class);
+    List<Object> series = (List<Object>) request.get("series");
+    
+    for(Object o : series) {
+      HashMap<String, Object> rec = (HashMap<String, Object>) o;
+      List<String> tags = (List<String>) rec.get("tags");
+      String name = rec.get("metric").toString();
+      
+      assertTrue(name.startsWith("java.lang.String.meter"));
+      assertEquals("with", tags.get(0));
+      assertEquals("tags", tags.get(1));
+    }
+  }
 }
+
