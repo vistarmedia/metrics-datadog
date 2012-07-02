@@ -45,7 +45,6 @@ public class DatadogReporter extends AbstractPollingReporter implements
       .getLogger(DatadogReporter.class);
   private final VirtualMachineMetrics vm;
 
-
   private static final JsonFactory jsonFactory = new JsonFactory();
   private static final ObjectMapper mapper = new ObjectMapper(jsonFactory);
   private JsonGenerator jsonOut;
@@ -54,15 +53,18 @@ public class DatadogReporter extends AbstractPollingReporter implements
     enable(period, unit, apiKey, null);
   }
 
-  public static void enable(long period, TimeUnit unit, String apiKey, String host) {
-    DatadogReporter dd = new DatadogReporter(Metrics.defaultRegistry(), apiKey, host);
+  public static void enable(long period, TimeUnit unit, String apiKey,
+      String host) {
+    DatadogReporter dd = new DatadogReporter(Metrics.defaultRegistry(), apiKey,
+        host);
     dd.start(period, unit);
   }
 
   public static void enableForEc2Instance(long period, TimeUnit unit,
       String apiKey) throws IOException {
     String hostName = AwsHelper.getEc2InstanceId();
-    DatadogReporter dd = new DatadogReporter(Metrics.defaultRegistry(), apiKey, hostName);
+    DatadogReporter dd = new DatadogReporter(Metrics.defaultRegistry(), apiKey,
+        hostName);
     dd.start(period, unit);
   }
 
@@ -72,7 +74,8 @@ public class DatadogReporter extends AbstractPollingReporter implements
 
   public DatadogReporter(MetricsRegistry registry, String apiKey, String host) {
     this(registry, MetricPredicate.ALL, VirtualMachineMetrics.getInstance(),
-        new HttpTransport("app.datadoghq.com", apiKey), Clock.defaultClock(), host);
+        new HttpTransport("app.datadoghq.com", apiKey), Clock.defaultClock(),
+        host);
   }
 
   public DatadogReporter(MetricsRegistry metricsRegistry,
@@ -185,12 +188,30 @@ public class DatadogReporter extends AbstractPollingReporter implements
   protected void pushVmMetrics(long epoch) {
     sendGauge("jvm.memory.heap_usage", vm.heapUsage(), epoch);
     sendGauge("jvm.memory.non_heap_usage", vm.nonHeapUsage(), epoch);
+    for (Entry<String, Double> pool : vm.memoryPoolUsage().entrySet()) {
+      String gaugeName = String.format("jvm.memory.memory_pool_usage[pool:%s]",
+          pool.getKey());
+
+      sendGauge(gaugeName, pool.getValue(), epoch);
+    }
 
     pushGauge("jvm.daemon_thread_count", vm.daemonThreadCount(), epoch);
     pushGauge("jvm.thread_count", vm.threadCount(), epoch);
-
     pushCounter("jvm.uptime", vm.uptime(), epoch);
     sendGauge("jvm.fd_usage", vm.fileDescriptorUsage(), epoch);
+
+    for (Entry<Thread.State, Double> entry : vm.threadStatePercentages()
+        .entrySet()) {
+      String gaugeName = String.format("jvm.thread-states[state:%s]",
+          entry.getKey());
+      sendGauge(gaugeName, entry.getValue(), epoch);
+    }
+
+    for (Entry<String, VirtualMachineMetrics.GarbageCollectorStats> entry : vm
+        .garbageCollectors().entrySet()) {
+      pushGauge("jvm.gc.time", entry.getValue().getTime(TimeUnit.MILLISECONDS), epoch);
+      pushCounter("jvm.gc.runs", entry.getValue().getRuns(), epoch);
+    }
   }
 
   private void pushCounter(MetricName metricName, Long count, Long epoch,
@@ -213,8 +234,8 @@ public class DatadogReporter extends AbstractPollingReporter implements
     sendGauge(sanitizeName(metricName, path), count, epoch);
   }
 
-  private void pushGauge(String name, int count, long epoch) {
-    sendGauge(name, new Integer(count), epoch);
+  private void pushGauge(String name, long count, long epoch) {
+    sendGauge(name, new Long(count), epoch);
   }
 
   private void sendGauge(String name, Number count, Long epoch) {
@@ -242,7 +263,7 @@ public class DatadogReporter extends AbstractPollingReporter implements
       sb.append('.').append(part);
     }
 
-    for(int i=1; i<metricParts.length; i++) {
+    for (int i = 1; i < metricParts.length; i++) {
       sb.append('[').append(metricParts[i]);
     }
     return sb.toString();
