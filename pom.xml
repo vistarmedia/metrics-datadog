@@ -3,7 +3,8 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.vistarmedia</groupId>
 	<artifactId>metrics-datadog</artifactId>
-	<version>0.0.17-SNAPSHOT</version>
+	<version>0.0.18-SNAPSHOT</version>
+  <packaging>jar</packaging>
 	<name>Datadog Metrics Support</name>
 	<properties>
 		<metrics.version>2.0.0</metrics.version>
