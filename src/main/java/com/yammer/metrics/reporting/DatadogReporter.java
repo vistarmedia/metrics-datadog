@@ -234,7 +234,7 @@ public class DatadogReporter extends AbstractPollingReporter implements
   }
 
   private void pushCounter(String name, Long count, Long epoch) {
-    DatadogCounter counter = new DatadogCounter(name, count, epoch, host);
+    DatadogCounter counter = new DatadogCounter(name, count, epoch, host, tags);
     try {
       mapper.writeValue(jsonOut, counter);
     } catch (Exception e) {
@@ -252,7 +252,7 @@ public class DatadogReporter extends AbstractPollingReporter implements
   }
 
   private void sendGauge(String name, Number count, Long epoch) {
-    DatadogGauge gauge = new DatadogGauge(name, count, epoch, host);
+    DatadogGauge gauge = new DatadogGauge(name, count, epoch, host, tags);
     try {
       mapper.writeValue(jsonOut, gauge);
     } catch (Exception e) {
