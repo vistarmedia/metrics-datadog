@@ -22,10 +22,14 @@ public abstract class DatadogSeries<T extends Number> {
   private final Pattern tagPattern = Pattern
       .compile("([\\w\\.]+)\\[([\\w\\W]+)\\]");
 
-  public DatadogSeries(String name, T count, Long epoch, String host) {
+  public DatadogSeries(String name, T count, Long epoch, String host, List<String> tags) {
     Matcher matcher = tagPattern.matcher(name);
-    this.tags = new ArrayList<String>();
-    
+    if(tags == null) {
+      this.tags = new ArrayList<String>();
+    } else {
+      this.tags = new ArrayList<String>(tags);
+    }
+
     if (matcher.find() && matcher.groupCount() == 2) {
       this.name = matcher.group(1);
       for(String t : matcher.group(2).split("\\,")) {
@@ -34,7 +38,7 @@ public abstract class DatadogSeries<T extends Number> {
     } else {
       this.name = name;
     }
-    
+
     this.count = count;
     this.epoch = epoch;
     this.host = host;

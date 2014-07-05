@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,7 @@ public class DatadogReporterTest {
   MockTransport transport;
   VirtualMachineMetrics vm;
   Clock clock;
+  DatadogReporter ddGlobalTags;
   DatadogReporter ddNoHost;
   DatadogReporter dd;
   static final MetricPredicate ALL = MetricPredicate.ALL;
@@ -41,11 +43,15 @@ public class DatadogReporterTest {
     vm = VirtualMachineMetrics.getInstance();
     ddNoHost = new DatadogReporter(metricsRegistry, MetricPredicate.ALL,
         VirtualMachineMetrics.getInstance(), transport, Clock.defaultClock(),
-        null);
+        null, null);
 
     dd = new DatadogReporter(metricsRegistry, MetricPredicate.ALL,
         VirtualMachineMetrics.getInstance(), transport, Clock.defaultClock(),
-        "hostname");
+        "hostname", null);
+
+    ddGlobalTags = new DatadogReporter(metricsRegistry, MetricPredicate.ALL,
+        VirtualMachineMetrics.getInstance(), transport, Clock.defaultClock(),
+        "hostname", Arrays.asList("tag1", "tag2:value2"));
   }
 
   @SuppressWarnings("unchecked")
@@ -123,7 +129,7 @@ public class DatadogReporterTest {
     Meter s = metricsRegistry.newMeter(String.class,
         "meter[with,tags]", "ticks", TimeUnit.SECONDS);
     s.mark();
-    
+
     ddNoHost.printVmMetrics = false;
     ddNoHost.run();
     String body = new String(transport.lastRequest.getPostBody(), "UTF-8");
@@ -131,15 +137,43 @@ public class DatadogReporterTest {
     Map<String, Object> request = new ObjectMapper().readValue(body,
         HashMap.class);
     List<Object> series = (List<Object>) request.get("series");
-    
+
     for(Object o : series) {
       HashMap<String, Object> rec = (HashMap<String, Object>) o;
       List<String> tags = (List<String>) rec.get("tags");
       String name = rec.get("metric").toString();
-      
+
       assertTrue(name.startsWith("java.lang.String.meter"));
       assertEquals("with", tags.get(0));
       assertEquals("tags", tags.get(1));
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testTaggedMeterWithGlobal() throws Throwable {
+    Meter s = metricsRegistry.newMeter(String.class,
+        "meter[with,tags]", "ticks", TimeUnit.SECONDS);
+    s.mark();
+
+    ddGlobalTags.printVmMetrics = false;
+    ddGlobalTags.run();
+    String body = new String(transport.lastRequest.getPostBody(), "UTF-8");
+
+    Map<String, Object> request = new ObjectMapper().readValue(body,
+        HashMap.class);
+    List<Object> series = (List<Object>) request.get("series");
+
+    for(Object o : series) {
+      HashMap<String, Object> rec = (HashMap<String, Object>) o;
+      List<String> tags = (List<String>) rec.get("tags");
+      String name = rec.get("metric").toString();
+
+      assertTrue(name.startsWith("java.lang.String.meter"));
+      assertTrue(tags.contains("with"));
+      assertTrue(tags.contains("tags"));
+      assertTrue(tags.contains("tag1"));
+      assertTrue(tags.contains("tag2:value2"));
     }
   }
 }
