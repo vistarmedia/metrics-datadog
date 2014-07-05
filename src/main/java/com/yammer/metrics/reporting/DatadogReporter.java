@@ -1,6 +1,7 @@
 package com.yammer.metrics.reporting;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
@@ -39,6 +40,7 @@ public class DatadogReporter extends AbstractPollingReporter implements
   protected final Locale locale = Locale.US;
   protected final Clock clock;
   private final String host;
+  private final List<String> tags;
   protected final MetricPredicate predicate;
   protected final Transport transport;
   private static final Logger LOG = LoggerFactory
@@ -50,13 +52,18 @@ public class DatadogReporter extends AbstractPollingReporter implements
   private JsonGenerator jsonOut;
 
   public static void enable(long period, TimeUnit unit, String apiKey) {
-    enable(period, unit, apiKey, null);
+    enable(period, unit, apiKey, null, null);
   }
 
   public static void enable(long period, TimeUnit unit, String apiKey,
-      String host) {
+      List<String> tags) {
+    enable(period, unit, apiKey, null, tags);
+  }
+
+  public static void enable(long period, TimeUnit unit, String apiKey,
+      String host, List<String> tags) {
     DatadogReporter dd = new DatadogReporter(Metrics.defaultRegistry(), apiKey,
-        host);
+        host, tags);
     dd.start(period, unit);
   }
 
@@ -64,29 +71,35 @@ public class DatadogReporter extends AbstractPollingReporter implements
       String apiKey) throws IOException {
     String hostName = AwsHelper.getEc2InstanceId();
     DatadogReporter dd = new DatadogReporter(Metrics.defaultRegistry(), apiKey,
-        hostName);
+        hostName, null);
     dd.start(period, unit);
   }
 
   public DatadogReporter(MetricsRegistry registry, String apiKey) {
-    this(registry, apiKey, null);
+    this(registry, apiKey, null, null);
   }
 
-  public DatadogReporter(MetricsRegistry registry, String apiKey, String host) {
+  public DatadogReporter(MetricsRegistry registry, String apiKey, List<String> tags) {
+    this(registry, apiKey, null, tags);
+  }
+
+  public DatadogReporter(MetricsRegistry registry, String apiKey, String host,
+      List<String> tags) {
     this(registry, MetricPredicate.ALL, VirtualMachineMetrics.getInstance(),
         new HttpTransport("app.datadoghq.com", apiKey), Clock.defaultClock(),
-        host);
+        host, tags);
   }
 
   public DatadogReporter(MetricsRegistry metricsRegistry,
       MetricPredicate predicate, VirtualMachineMetrics vm, Transport transport,
-      Clock clock, String host) {
+      Clock clock, String host, List<String> tags) {
     super(metricsRegistry, "datadog-reporter");
     this.vm = vm;
     this.transport = transport;
     this.predicate = predicate;
     this.clock = clock;
     this.host = host;
+    this.tags = tags;
   }
 
   @Override
